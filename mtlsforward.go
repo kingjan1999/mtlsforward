@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/pem"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -115,7 +114,7 @@ func (m *mTLSForward) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 	// are we using mTLS?
 	if request.TLS != nil && len(request.TLS.PeerCertificates) > 0 {
 		for i, cert := range request.TLS.PeerCertificates {
-			fmt.Println("Found certificate with subject", cert.Subject, "issued by", cert.Issuer)
+			// fmt.Println("Found certificate with subject", cert.Subject, "issued by", cert.Issuer)
 			certString := m.encodeCertificate(&cert.Raw)
 			if i == 0 {
 				request.Header.Set(m.headers["sslClientCert"], certString)
@@ -126,8 +125,6 @@ func (m *mTLSForward) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 			}
 		}
 	}
-	fmt.Println("Ready for next plugin")
-
 	// call to next plugin
 	m.next.ServeHTTP(writer, request)
 }
