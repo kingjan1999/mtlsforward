@@ -2,7 +2,7 @@ This repository contains a Traefik plugin to forward a mTLS client
 certificate via HTTP Headers
                                                            
 [![Build
-Status](https://github.com/kingjan1999/mtlsforward/workflows/Main/badge.svg?branch=master)](https://github.com/pvliesdonk/mtlsforward/actions)
+Status](https://github.com/kingjan1999/mtlsforward/workflows/Main/badge.svg?branch=master)](https://github.com/kingjan1999/mtlsforward/actions)
                                                            
 The existing plugins can be browsed into the [Plugin Catalog](https://plugins.traefik.io).
                                                            
@@ -38,8 +38,9 @@ http:
             sslClientCert: "SSL_CLIENT_CERT"      
             sslCertChainPrefix: "SSL_CERT_CHAIN" 
           encodePem: false   #optional, encode certificates as PEM
+          sanitizePem: true   #optional, remove BEGIN/END lines and newlines from PEM encoding 
           encodeUrl: false   #optional, enable URL encoding
-          removeNewline: true #remove newlines from PEM encoding          
+          removeNewline: true #remove newlines from PEM encoding  (part of sanitizePem)
           
   routers:
     my-router:

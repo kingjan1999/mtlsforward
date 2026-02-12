@@ -14,10 +14,17 @@ import (
 	"strings"
 )
 
+// defaults adapted from traefik
+const (
+	xForwardedTLSClientCertDefault     = "X-Forwarded-Tls-Client-Cert"
+	xForwardedTLSClientCertChainPrefix = "X-Forwarded-Tls-Client-Cert-Chain"
+)
+
 // Config handles configuration of the sslClientCert (e.g. SSL_CLIENT_CERT) and sslCertChainPrefix (e.g. SSL_CERT_CHAIN) headers.
 type Config struct {
 	Headers       map[string]string
 	EncodePem     bool
+	SanitizePem   bool
 	EncodeURL     bool
 	RemoveNewline bool
 }
@@ -25,8 +32,12 @@ type Config struct {
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		Headers:       make(map[string]string),
+		Headers: map[string]string{
+			"sslClientCert":      xForwardedTLSClientCertDefault,
+			"sslCertChainPrefix": xForwardedTLSClientCertChainPrefix,
+		},
 		EncodePem:     false,
+		SanitizePem:   false,
 		EncodeURL:     false,
 		RemoveNewline: true,
 	}
@@ -34,18 +45,23 @@ func CreateConfig() *Config {
 
 // New created a new plugin.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	_, ok := config.Headers["sslClientCert"]
-	if !ok {
-		return nil, fmt.Errorf("configuration option 'sslClientCert' not set")
+	// Ensure headers map is initialized
+	if config.Headers == nil {
+		config.Headers = make(map[string]string)
 	}
-	_, ok = config.Headers["sslCertChainPrefix"]
-	if !ok {
-		return nil, fmt.Errorf("configuration option 'sslCertChainPrefix' not set")
+
+	// Set defaults for missing header keys
+	if _, ok := config.Headers["sslClientCert"]; !ok {
+		config.Headers["sslClientCert"] = xForwardedTLSClientCertDefault
+	}
+	if _, ok := config.Headers["sslCertChainPrefix"]; !ok {
+		config.Headers["sslCertChainPrefix"] = xForwardedTLSClientCertChainPrefix
 	}
 
 	return &mTLSForward{
 		headers:       config.Headers,
 		encodePem:     config.EncodePem,
+		sanitizePem:   config.SanitizePem,
 		encodeURL:     config.EncodeURL,
 		removeNewline: config.RemoveNewline,
 		next:          next,
@@ -56,17 +72,31 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 type mTLSForward struct {
 	headers       map[string]string
 	encodePem     bool
+	sanitizePem   bool
 	encodeURL     bool
 	removeNewline bool
 	next          http.Handler
 	name          string
 }
 
-func (m mTLSForward) encodeCertificate(certBytes *[]byte) string {
+// this is copied from the original passTlsClientCert middleware in traefik
+func sanitize(cert []byte) string {
+	return strings.NewReplacer(
+		"-----BEGIN CERTIFICATE-----", "",
+		"-----END CERTIFICATE-----", "",
+		"\n", "",
+	).Replace(string(cert))
+}
+
+func (m *mTLSForward) encodeCertificate(certBytes *[]byte) string {
 	encodedCert := ""
 
 	if m.encodePem {
-		encodedCert = string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: *certBytes}))
+		if m.sanitizePem {
+			encodedCert = sanitize(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: *certBytes}))
+		} else {
+			encodedCert = string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: *certBytes}))
+		}
 	} else {
 		encodedCert = base64.StdEncoding.EncodeToString(*certBytes)
 	}
@@ -81,7 +111,7 @@ func (m mTLSForward) encodeCertificate(certBytes *[]byte) string {
 	return encodedCert
 }
 
-func (m mTLSForward) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (m *mTLSForward) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	// are we using mTLS?
 	if request.TLS != nil && len(request.TLS.PeerCertificates) > 0 {
 		for i, cert := range request.TLS.PeerCertificates {
