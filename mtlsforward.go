@@ -124,6 +124,16 @@ func (m *mTLSForward) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 				request.Header.Set(headerName, certString)
 			}
 		}
+	} else {
+		// remove headers if no client certificate is present
+		// todo: check if the header is "trusted" somehow, c.f.
+		// https://github.com/traefik/traefik/blob/4a4be524bb38334b427849a184aa92141dd3973d/pkg/middlewares/forwardedheaders/forwarded_header.go#L136
+		request.Header.Del(m.headers["sslClientCert"])
+		for headerName := range request.Header {
+			if strings.HasPrefix(headerName, m.headers["sslCertChainPrefix"]+"_") {
+				request.Header.Del(headerName)
+			}
+		}
 	}
 	// call to next plugin
 	m.next.ServeHTTP(writer, request)
