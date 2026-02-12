@@ -2,7 +2,7 @@ This repository contains a Traefik plugin to forward a mTLS client
 certificate via HTTP Headers
                                                            
 [![Build
-Status](https://github.com/pvliesdonk/mtlsforward/workflows/Main/badge.svg?branch=master)](https://github.com/pvliesdonk/mtlsforward/actions)
+Status](https://github.com/kingjan1999/mtlsforward/workflows/Main/badge.svg?branch=master)](https://github.com/pvliesdonk/mtlsforward/actions)
                                                            
 The existing plugins can be browsed into the [Plugin Catalog](https://plugins.traefik.io).
                                                            
@@ -15,7 +15,7 @@ Add the following to the static configuration traefik.yaml
 experimental:
   plugins:
     mtlsforward:
-      moduleName: "github.com/pvliesdonk/mtlsforward"
+      moduleName: "github.com/kingjan1999/mtlsforward"
       version: "v0.1.0"         # check latest version
 ```
 ## Dynamic Configuration
@@ -75,7 +75,7 @@ experimental:
   plugins:
     enabled: true
     mtlsforward:
-      moduleName: "github.com/pvliesdonk/mtlsforward"
+      moduleName: "github.com/kingjan1999/mtlsforward"
       version: "v0.0.5"
 ```
 
